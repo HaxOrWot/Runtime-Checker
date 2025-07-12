@@ -1,1 +1,1 @@
-Z:\VSCode\Python\Apps\Runtime Checker\check_code
+\Runtime Checker\check_code
