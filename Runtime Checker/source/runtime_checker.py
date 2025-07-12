@@ -17,13 +17,6 @@ SUPPORTED_EXTENSIONS = {
 }
 
 def get_code_folder_path():
-    """
-    Manages the persistent storage and retrieval of the 'check_code' folder path.
-    - If dest.txt is missing, it defaults to creating 'check_code' in the script's directory.
-    - If dest.txt exists and contains a valid path, it uses that.
-    - If dest.txt exists but is empty or contains an invalid path, it prompts the user.
-    - Automatically creates the 'check_code' folder at the determined path if it doesn't exist.
-    """
     script_dir = os.path.dirname(os.path.abspath(__file__))
     dest_file_path = os.path.join(script_dir, DEST_FILE)
     code_folder_path = None # This will hold the final, valid path
@@ -91,9 +84,6 @@ def get_code_folder_path():
     return code_folder_path
 
 def get_file_to_run(code_folder_path):
-    """
-    Lists supported code files in the given folder and prompts the user to select one.
-    """
     supported_files = []
     for filename in os.listdir(code_folder_path):
         file_path = os.path.join(code_folder_path, filename)
@@ -127,26 +117,6 @@ def get_file_to_run(code_folder_path):
 
 
 def run_code_from_file(file_path, time_limit=10, input_data=None):
-    """
-    Reads code from a file, determines its language, executes it,
-    and measures its runtime. Temporary files are stored in a 'temp_files'
-    subfolder created alongside the input file.
-
-    Args:
-        file_path (str): The path to the code file.
-        time_limit (int): Maximum execution time allowed in seconds.
-        input_data (str, optional): String data to be passed as standard input to the program.
-                                     Defaults to None (no input).
-
-    Returns:
-        dict: A dictionary containing the execution results:
-              - 'status': "Success", "File Error", "Language Error",
-                          "Compilation Error", "Runtime Error", "Time Limit Exceeded"
-              - 'runtime': Float, execution time in milliseconds
-              - 'output': String, standard output of the program
-              - 'error': String, standard error or error message
-              - 'language': String, detected language
-    """
     results = {
         "status": "Pending",
         "runtime": 0.0,
@@ -339,29 +309,24 @@ def run_code_from_file(file_path, time_limit=10, input_data=None):
 
 # --- Main execution logic ---
 if __name__ == "__main__":
-    # Get the code folder path (handles persistence and automatic creation)
     code_folder = get_code_folder_path()
 
     if code_folder:
-        while True: # Loop indefinitely until user decides to quit
-            # Get the specific file to run from the code folder
+        while True:
             selected_file_full_path = get_file_to_run(code_folder)
 
             if selected_file_full_path:
-                # Ask for input data if the file is a Python, C, C++, or Java file
                 file_extension = os.path.splitext(selected_file_full_path)[1].lower()
-                input_data = None # Initialize input_data to None
+                input_data = None
                 if file_extension in SUPPORTED_EXTENSIONS:
                     user_wants_input = input("Does this code require input? (yes/no): ").strip().lower()
                     if user_wants_input == 'yes':
                         input_data = input("Enter input data (use '\\n' for new lines): ")
-                    # If user_wants_input is 'no' or anything else, input_data remains None
 
                 print(f"\n--- Running '{os.path.basename(selected_file_full_path)}' ---")
                 results = run_code_from_file(selected_file_full_path, input_data=input_data)
                 print(f"Status: {results['status']}")
                 print(f"Language: {results['language']}")
-                # Display runtime in milliseconds
                 print(f"Runtime: {results['runtime']:.2f} MS")
                 print(f"Output:\n{results['output']}")
                 if results['error']:
@@ -369,20 +334,16 @@ if __name__ == "__main__":
                 print("\n" + "="*50 + "\n")
             else:
                 print("No file selected or folder is empty. Cannot proceed with execution.")
-                # If no file is selected, ask if they want to try again or quit
-                # This prevents an infinite loop if the folder is empty and they keep saying 'no'
-                # to selecting a file.
-                pass # Let the quit prompt handle this
+                pass
 
-            # Ask user if they want to quit or run another file
             while True:
                 quit_choice = input("Do you want to quit? (yes/no): ").strip().lower()
                 if quit_choice == 'yes':
                     print("Exiting..... Exited")
-                    exit() # Use exit() to terminate the script
+                    exit()
                 elif quit_choice == 'no':
                     print("\n--- Preparing for next code check ---")
-                    break # Break out of the inner loop to continue the outer while True loop
+                    break
                 else:
                     print("Invalid choice. Please enter 'yes' or 'no'.")
     else:
