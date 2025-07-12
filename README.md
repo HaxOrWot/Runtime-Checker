@@ -7,3 +7,8 @@ It will run the program and tell how long it took to run the code.
 <sub> The Runtime is not certain it can change </sub>
 
 # **SUPPORTED FILE EXTENTIONS**
+- Java
+- C
+- C++
+- Python
+<sub> Working on it, to support more languages </sub>
