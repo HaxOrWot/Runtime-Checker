@@ -19,20 +19,16 @@ SUPPORTED_EXTENSIONS = {
 def get_code_folder_path():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     dest_file_path = os.path.join(script_dir, DEST_FILE)
-    code_folder_path = None # This will hold the final, valid path
+    code_folder_path = None
 
-    # Determine the default path if no custom path is provided/valid
     default_code_folder_path = os.path.join(script_dir, CODE_FOLDER_NAME)
 
-    # 1. Try to read the path from dest.txt
     stored_path_from_file = None
     if os.path.exists(dest_file_path):
         try:
             with open(dest_file_path, 'r') as f:
                 stored_path_from_file = f.read().strip()
             if stored_path_from_file:
-                # Validate the stored path: Is it a directory OR does it not exist (for creation)?
-                # And does it have the correct folder name?
                 if (os.path.isdir(stored_path_from_file) or not os.path.exists(stored_path_from_file)) and \
                    os.path.basename(stored_path_from_file).lower() == CODE_FOLDER_NAME:
                     code_folder_path = stored_path_from_file
@@ -40,44 +36,38 @@ def get_code_folder_path():
                 else:
                     print(f"Stored path '{stored_path_from_file}' in '{DEST_FILE}' is invalid or not named '{CODE_FOLDER_NAME}'.")
             else:
-                print(f"'{DEST_FILE}' is empty. Will prompt for a new path.")
+                print(f"'{DEST_FILE}' is empty.")
         except Exception as e:
             print(f"Warning: Could not read '{DEST_FILE}': {e}. Will prompt for a new path.")
     else:
         print(f"'{DEST_FILE}' not found. Defaulting to '{default_code_folder_path}'.")
-        code_folder_path = default_code_folder_path # Condition 1: Default if dest.txt doesn't exist
+        code_folder_path = default_code_folder_path
 
-    # 2. If code_folder_path is still None (meaning dest.txt was empty or invalid), prompt the user
     while code_folder_path is None:
         user_input = input(f"Please enter the full path to your '{CODE_FOLDER_NAME}' folder: ").strip()
         if not user_input:
             print("Path cannot be empty. Please try again.")
             continue
 
-        # Normalize path to handle different OS conventions
         user_input = os.path.abspath(user_input)
 
-        # Validate user input: Allow if it's an existing directory OR if it doesn't exist but has the correct name
         if (os.path.isdir(user_input) or not os.path.exists(user_input)) and \
            os.path.basename(user_input).lower() == CODE_FOLDER_NAME:
-            code_folder_path = user_input # Accept this as a potential path
+            code_folder_path = user_input
         else:
             print(f"Error: '{user_input}' is not a valid directory path or not named '{CODE_FOLDER_NAME}'. Please try again.")
 
-    # 3. Once code_folder_path is determined (from default, file, or user input), ensure the directory exists
     try:
         os.makedirs(code_folder_path, exist_ok=True)
-        print(f"Ensured '{CODE_FOLDER_NAME}' folder exists at: '{code_folder_path}'")
+        print(f"Ensuring '{CODE_FOLDER_NAME}' folder exists at: '{code_folder_path}'")
     except Exception as e:
         print(f"Error: Could not create '{CODE_FOLDER_NAME}' folder at '{code_folder_path}': {e}")
-        return None # Critical error, cannot proceed
+        return None
 
-    # 4. Save the final determined path to dest.txt
-    # This ensures dest.txt always holds the currently used and valid path
     try:
         with open(dest_file_path, 'w') as f:
             f.write(code_folder_path)
-        print(f"Updated '{DEST_FILE}' with the current code folder path.")
+        print(f"Updated '{DEST_FILE}' with the current folder path.")
     except Exception as e:
         print(f"Warning: Could not save path to '{DEST_FILE}': {e}")
 
@@ -97,7 +87,7 @@ def get_file_to_run(code_folder_path):
         print("Please place .py, .c, .cpp, or .java files inside this folder.")
         return None
 
-    print(f"\nFound the following code files in '{code_folder_path}':")
+    print(f"\nFound the following files in '{code_folder_path}':")
     for i, filename in enumerate(supported_files):
         print(f"  {i + 1}. {filename}")
 
@@ -125,65 +115,52 @@ def run_code_from_file(file_path, time_limit=10, input_data=None):
         "language": "Unknown"
     }
 
-    # 1. Check if file exists (already checked by get_file_to_run, but good for robustness)
     if not os.path.exists(file_path):
         results["status"] = "File Error"
         results["error"] = f"Error: File not found at '{file_path}'."
         return results
 
-    # Determine the directory of the input file (which is inside check_code)
     file_directory = os.path.dirname(os.path.abspath(file_path))
     temp_files_dir = os.path.join(file_directory, "temp_files")
 
-    # Create the temp_files directory if it doesn't exist
     os.makedirs(temp_files_dir, exist_ok=True)
 
-    # 2. Determine language from extension
     file_extension = os.path.splitext(file_path)[1].lower()
     language = SUPPORTED_EXTENSIONS.get(file_extension)
 
-    if language is None: # Should not happen if get_file_to_run works correctly
+    if language is None:
         results["status"] = "Language Error"
         results["error"] = f"Error: Unsupported file extension '{file_extension}'. Supported: .py, .c, .cpp, .cxx, .cc, .java"
-        # Clean up temp_files directory if it was created and is empty
         if os.path.exists(temp_files_dir) and not os.listdir(temp_files_dir):
             os.rmdir(temp_files_dir)
         return results
 
     results["language"] = language
 
-    # 3. Read code from file
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             code_content = f.read()
     except Exception as e:
         results["status"] = "File Error"
         results["error"] = f"Error reading file: {e}"
-        # Clean up temp_files directory if it was created and is empty
         if os.path.exists(temp_files_dir) and not os.listdir(temp_files_dir):
             os.rmdir(temp_files_dir)
         return results
 
-    # 4. Check for empty file
-    if not code_content.strip(): # .strip() removes whitespace
+    if not code_content.strip():
         results["status"] = "File Error"
         results["error"] = "Error: The provided file is empty or contains only whitespace."
-        # Clean up temp_files directory if it was created and is empty
         if os.path.exists(temp_files_dir) and not os.listdir(temp_files_dir):
             os.rmdir(temp_files_dir)
         return results
 
-    # Prepare for execution
     command = []
-    temp_exec_path = None # To store path of compiled executable/class file/temp dir
-    process = None # Initialize process to None to prevent UnboundLocalError
+    temp_exec_path = None
+    process = None
 
     try:
         if language == "python":
-            # Directly use the system's python3 or python command
-            # This assumes python3/python is in the system's PATH
             command = ["python3", file_path]
-            # Fallback to 'python' if 'python3' is not found (common on some systems)
             try:
                 subprocess.run(["python3", "--version"], check=True, capture_output=True)
             except (subprocess.CalledProcessError, FileNotFoundError):
@@ -196,7 +173,6 @@ def run_code_from_file(file_path, time_limit=10, input_data=None):
                     return results
 
         elif language == "c":
-            # Create a temporary output file for the executable inside temp_files_dir
             with tempfile.NamedTemporaryFile(delete=False, suffix=".out", dir=temp_files_dir) as tmp_exec:
                 temp_exec_path = tmp_exec.name
 
@@ -213,7 +189,6 @@ def run_code_from_file(file_path, time_limit=10, input_data=None):
                 return results
             command = [temp_exec_path]
         elif language == "cpp":
-            # Create a temporary output file for the executable inside temp_files_dir
             with tempfile.NamedTemporaryFile(delete=False, suffix=".out", dir=temp_files_dir) as tmp_exec:
                 temp_exec_path = tmp_exec.name
 
@@ -230,9 +205,7 @@ def run_code_from_file(file_path, time_limit=10, input_data=None):
                 return results
             command = [temp_exec_path]
         elif language == "java":
-            # Java requires the class name to match the file name (without .java)
             class_name = os.path.splitext(os.path.basename(file_path))[0]
-            # Create a temporary directory for Java class files inside temp_files_dir
             temp_dir = tempfile.mkdtemp(dir=temp_files_dir)
             compile_command = ["javac", "-d", temp_dir, file_path]
             compile_process = subprocess.run(
@@ -244,46 +217,40 @@ def run_code_from_file(file_path, time_limit=10, input_data=None):
             if compile_process.returncode != 0:
                 results["status"] = "Compilation Error"
                 results["error"] = compile_process.stderr
-                # Clean up temp dir even on compilation error
                 if os.path.exists(temp_dir):
                     shutil.rmtree(temp_dir)
                 return results
             command = ["java", "-cp", temp_dir, class_name]
-            temp_exec_path = temp_dir # Store temp dir for cleanup
+            temp_exec_path = temp_dir
 
 
-        # 5. Run the code and measure time
         start_time = time.perf_counter()
         try:
-            process = subprocess.run( # 'process' is assigned here
+            process = subprocess.run(
                 command,
-                input=input_data, # Pass input_data to the stdin of the subprocess
+                input=input_data,
                 capture_output=True,
                 text=True,
                 timeout=time_limit,
-                check=False # Do not raise CalledProcessError for non-zero exit codes
+                check=False
             )
             end_time = time.perf_counter()
-            # Convert runtime from seconds to milliseconds
             results["runtime"] = (end_time - start_time) * 1000
             results["output"] = process.stdout.strip()
             results["error"] = process.stderr.strip()
 
             if process.returncode != 0:
                 results["status"] = "Runtime Error"
-                if not results["error"]: # If stderr is empty, but return code is non-zero
+                if not results["error"]:
                     results["error"] = f"Process exited with non-zero status code: {process.returncode}"
             else:
                 results["status"] = "Success"
 
         except subprocess.TimeoutExpired:
-            # If a timeout occurs, process will be defined by subprocess.run
-            # but it might still be running. We explicitly kill it.
-            if process and process.poll() is None: # Check if process is still running
-                process.kill() # Ensure the process is terminated
+            if process and process.poll() is None:
+                process.kill()
             end_time = time.perf_counter()
-            # Convert runtime from seconds to milliseconds
-            results["runtime"] = (end_time - start_time) * 1000 # Record time up to timeout
+            results["runtime"] = (end_time - start_time) * 1000
             results["status"] = "Time Limit Exceeded"
             results["error"] = f"Execution exceeded time limit of {time_limit} seconds."
         except FileNotFoundError:
@@ -294,16 +261,13 @@ def run_code_from_file(file_path, time_limit=10, input_data=None):
             results["error"] = f"An unexpected error occurred during execution: {e}"
 
     finally:
-        # Clean up temporary files/directories
         if language in ["c", "cpp"] and temp_exec_path and os.path.exists(temp_exec_path):
             os.remove(temp_exec_path)
         if language == "java" and temp_exec_path and os.path.exists(temp_exec_path):
             shutil.rmtree(temp_exec_path, ignore_errors=True)
 
-        # Clean up the temp_files directory if it's empty after all operations
         if os.path.exists(temp_files_dir) and not os.listdir(temp_files_dir):
             os.rmdir(temp_files_dir)
-
 
     return results
 
@@ -321,7 +285,16 @@ if __name__ == "__main__":
                 if file_extension in SUPPORTED_EXTENSIONS:
                     user_wants_input = input("Does this code require input? (yes/no): ").strip().lower()
                     if user_wants_input == 'yes':
-                        input_data = input("Enter input data (use '\\n' for new lines): ")
+                        print("Enter input data. Type 'DONE' on a new line when finished:")
+                        input_lines = []
+                        while True:
+                            line = input()
+                            if line.strip().lower() == 'done':
+                                break
+                            input_lines.append(line)
+                        input_data = "\n".join(input_lines)
+                        if not input_data.strip():
+                            input_data = None
 
                 print(f"\n--- Running '{os.path.basename(selected_file_full_path)}' ---")
                 results = run_code_from_file(selected_file_full_path, input_data=input_data)
