@@ -17,7 +17,7 @@ A Simple python script to check the how long does it take for a file to run
 # **HOW IT WORKS**
 
 On the first run it will create the `dest.txt` file and a folder `check_code` in the same directory as the script</br>
-and store the destination of the `check_code` folder. If it doesnt find the `check_code` folder then it will check inside the **dest.txt**</br>
+and store the destination of the `check_code` folder. If it doesnt find the `check_code` folder then it will check inside the **dest.txt**
 and if theres any destination saved it will use it to make the folder
 
 > [!NOTE]
